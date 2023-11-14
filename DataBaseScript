@@ -1,0 +1,88 @@
+create database revision;
+use revision;
+
+CREATE TABLE Zonas_Estaciones(
+    Id_Colonia_Delegacion int,
+    Colonia_Delegacion varchar(45),
+    primary key (Id_Colonia_Delegacion));
+    
+CREATE TABLE Direccion_Estaciones(
+    Id_Direccion int,
+	Id_Colonia_Delegacion int,
+    Calle varchar(45),
+    Numero varchar(45),
+    primary key (Id_Direccion),
+    foreign key (Id_Colonia_Delegacion) references Zonas_Estaciones(Id_Colonia_Delegacion));
+
+CREATE TABLE Estaciones_Meteorologicas(
+    Id_Estacion int,
+    Id_Direccion int,
+    Nombre varchar(45),
+    Modelo varchar(45),
+    Entidad varchar(45),
+    primary key (Id_Estacion),
+    foreign key (Id_Direccion) references Direccion_Estaciones(Id_Direccion));
+    
+CREATE TABLE Variables_Meteorologicas(
+    Id_Resgistro_Datos int,
+    Id_Estacion int,
+    Fecha_Hora varchar(45),
+    Temperatura float,
+    Velocidad_Viento float,
+    Direccion_Viento float,
+    Lluvia_Actual float,
+    Lluvia_Diaria float,
+    Presion_Atmosferica float,
+    Humedad float,
+    primary key (Id_Resgistro_Datos),
+    foreign key (Id_Estacion) references Estaciones_Meteorologicas(Id_Estacion));
+
+
+CREATE TABLE CDMX_HISTORICO(
+    Id_CDMX int,
+    Id_Estacion int,
+    Fecha_Hora varchar(45),
+    Temperatura float,
+    Velocidad_Viento float,
+    Direccion_Viento float,
+    Presion_Atmosferica float,
+    Humedad float,
+    primary key (Id_CDMX),
+    foreign key (Id_Estacion) references Estaciones_Meteorologicas(Id_Estacion));
+
+CREATE TABLE CDMX_UNAM(
+    Id_UNAM int,
+    Id_Estacion int,
+    Fecha_Hora varchar(45),
+    Lluvia_Actual float,
+    Lluvia_Diaria float,
+    primary key (Id_UNAM),
+    foreign key (Id_Estacion) references Estaciones_Meteorologicas(Id_Estacion));
+    
+CREATE TABLE UPIITA(
+    Id_UPIITA int,
+    Id_Estacion int,
+    Fecha_Hora varchar(45),
+    Temperatura float,
+    Humedad float,
+    Velocidad_Viento float,
+    Direccion_Viento float,
+    Presion_Atmosferica float,
+	Lluvia_Acumulada float,
+    Lluvia_Actual float,
+    primary key (Id_UPIITA),
+    foreign key (Id_Estacion) references Estaciones_Meteorologicas(Id_Estacion));
+
+CREATE TABLE ESCOM(
+    Id_ESCOM int,
+    Id_Estacion int,
+    Fecha_Hora varchar(45),
+    Temperatura float,
+    Humedad float,
+    Velocidad_Viento float,
+    Direccion_Viento float,
+    Presion_Atmosferica float,
+	Lluvia_Acumulada float,
+    Lluvia_Actual float,
+    primary key (Id_ESCOM),
+    foreign key (Id_Estacion) references Estaciones_Meteorologicas(Id_Estacion));
