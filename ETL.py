@@ -110,12 +110,126 @@ cdmx_historico["Id_CDMX"] = range(1, len(variables_totales) + 1)
 cdmx_historico = variables_totales[["Id_CDMX","Id_Estacion", "Fecha_Hora", "Temperatura", "Velocidad_Viento", "Direccion_Viento","Presion_Atmosferica","Humedad"]]
 cdmx_historico.to_excel('cdmx_historico.xlsx',index=False)
 #####################################################################################################
-#DATOS TABLE "cdmx_unam"
+#DATOS TABLA "cdmx_unam"
 cdmx_unam=variables_totales
 cdmx_unam["Id_UNAM"] = range(1, len(variables_totales) + 1)
 cdmx_unam = variables_totales[["Id_UNAM","Id_Estacion", "Fecha_Hora", "Lluvia_Actual","Lluvia_Diaria"]]
 cdmx_unam.to_excel('cdmx_unam.xlsx', index=False)
 #####################################################################################################
+#DATOS TABLA "upiita"
+ruta_directorio = r'C:\Users\herca\OneDrive\Documentos\Python Scripts\Davis'
+nombre_archivo = 'DatosFiltrados.txt'
+ruta_archivo = f'{ruta_directorio}\\{nombre_archivo}'
+names = ['Date', 'Time', 'Temp Out', 'Hi Temp', 'Low Temp', 'Out Hum', 'Dew Pt.', 'Wind Speed', 'Wind Dir', 'Wind Run',
+         'Hi Speed', 'Hi Dir', 'Wind Chill', 'Heat Index', 'THW Index', 'Bar', 'Rain', 'Rain Rate', 'Heat D-D',
+         'Cool D-D', 'In Temp', 'In Hum', 'In Dew', 'In Heat', 'In EMC', 'In Air Density', 'Wind Samp', 'Wind Tx',
+         'ISS Recept', 'Arc. Int']
+df_inicial = pd.read_csv(ruta_archivo, delimiter='\s+', error_bad_lines=False, header=None, names=names)
+df_inicial["Id_UPIITA"] = range(1, len(df_inicial) + 1)
+df_inicial["Id_Estacion"] = ""
+df_upiita = df_inicial[["Id_UPIITA", "Id_Estacion", "Date", "Time", "Hi Temp", "In Hum", "Wind Speed", "Wind Dir", "Bar",
+                        "Rain", "Rain Rate"]]
+df_upiita.rename(columns={'Hi Temp': 'Temperatura', 'In Hum': 'Humedad', 'Wind Speed': 'Velocidad_Viento',
+                          'Wind Dir': 'Direccion_Viento', 'Bar': 'Presion_Atmosferica', 'Rain': 'Lluvia_Acumulada',
+                          'Rain Rate': 'Lluvia_Actual'}, inplace=True)
+df_upiita['Date'] = pd.to_datetime(df_upiita['Date'], format='%d/%m/%y', errors='coerce').dt.strftime('%d/%m/%Y')
+def convertir_a_24_horas(time_str):
+    hora, minutos = map(int, time_str[:-1].split(':'))
+    if time_str.endswith('p') and hora != 12:
+        hora += 12
+    elif time_str.endswith('a') and hora == 12:
+        hora = 0
+    return f'{hora:02d}:{minutos:02d}'
+
+df_upiita['Time'] = df_upiita['Time'].apply(convertir_a_24_horas)
+direccion_viento_mapping = {
+    'N': 0,
+    'NNE': 22.5,
+    'NE': 45,
+    'ENE': 67.5,
+    'E': 90,
+    'ESE': 112.5,
+    'SE': 135,
+    'SSE': 157.5,
+    'S': 180,
+    'SSW': 202.5,
+    'SW': 225,
+    'WSW': 247.5,
+    'W': 270,
+    'WNW': 292.5,
+    'NW': 315,
+    'NNW': 337.5,
+    "---":-1
+}
+df_upiita['Direccion_Viento'] = df_upiita['Direccion_Viento'].map(direccion_viento_mapping)
+df_upiita['Fecha_Hora'] = df_upiita['Date'] + ' ' + df_upiita['Time']
+# Convertir 'Fecha_Hora' a formato de fecha y hora
+df_upiita['Fecha_Hora'] = pd.to_datetime(df_upiita['Fecha_Hora'], format='%d/%m/%Y %H:%M', errors='coerce')
+
+# Filtrar solo las horas cerradas sin minutos
+df_upiita = df_upiita[df_upiita['Fecha_Hora'].dt.minute == 0]
+df_upiita.drop(['Date', 'Time'], axis=1, inplace=True)
+df_upiita['Temperatura'] = pd.to_numeric(df_upiita['Temperatura'], errors='coerce')
+df_upiita = df_upiita[["Id_UPIITA", "Id_Estacion", "Fecha_Hora", "Temperatura", "Humedad", "Velocidad_Viento", "Direccion_Viento", "Presion_Atmosferica","Lluvia_Acumulada", "Lluvia_Actual"]]
+df_upiita.to_excel('datos_filtrados_UPIITA.xlsx', index=False)
+################################################################################################################
+#DATOS TABLA escom
+ruta_directorio = r'C:\Users\herca\OneDrive\Documentos\Python Scripts\Davis\davis ESCOM'
+nombre_archivo = 'DatosFiltrados.txt'
+ruta_archivo = f'{ruta_directorio}\\{nombre_archivo}'
+names = ['Date', 'Time', 'Temp Out', 'Hi Temp', 'Low Temp', 'Out Hum', 'Dew Pt.', 'Wind Speed', 'Wind Dir', 'Wind Run',
+         'Hi Speed', 'Hi Dir', 'Wind Chill', 'Heat Index', 'THW Index', 'Bar', 'Rain', 'Rain Rate', 'Heat D-D',
+         'Cool D-D', 'In Temp', 'In Hum', 'In Dew', 'In Heat', 'In EMC', 'In Air Density', 'Wind Samp', 'Wind Tx',
+         'ISS Recept', 'Arc. Int']
+df_inicial = pd.read_csv(ruta_archivo, delimiter='\s+', error_bad_lines=False, header=None, names=names)
+df_inicial["Id_ESCOM"] = range(1, len(df_inicial) + 1)
+df_inicial["Id_Estacion"] = ""
+df_escom = df_inicial[["Id_ESCOM", "Id_Estacion", "Date", "Time", "Hi Temp", "In Hum", "Wind Speed", "Wind Dir", "Bar",
+                        "Rain", "Rain Rate"]]
+df_escom.rename(columns={'Hi Temp': 'Temperatura', 'In Hum': 'Humedad', 'Wind Speed': 'Velocidad_Viento',
+                          'Wind Dir': 'Direccion_Viento', 'Bar': 'Presion_Atmosferica', 'Rain': 'Lluvia_Acumulada',
+                          'Rain Rate': 'Lluvia_Actual'}, inplace=True)
+df_escom['Date'] = pd.to_datetime(df_escom['Date'], format='%d/%m/%y', errors='coerce').dt.strftime('%d/%m/%Y')
+def convertir_a_24_horas(time_str):
+    hora, minutos = map(int, time_str[:-1].split(':'))
+    if time_str.endswith('p') and hora != 12:
+        hora += 12
+    elif time_str.endswith('a') and hora == 12:
+        hora = 0
+    return f'{hora:02d}:{minutos:02d}'
+
+df_escom['Time'] = df_escom['Time'].apply(convertir_a_24_horas)
+direccion_viento_mapping = {
+    'N': 0,
+    'NNE': 22.5,
+    'NE': 45,
+    'ENE': 67.5,
+    'E': 90,
+    'ESE': 112.5,
+    'SE': 135,
+    'SSE': 157.5,
+    'S': 180,
+    'SSW': 202.5,
+    'SW': 225,
+    'WSW': 247.5,
+    'W': 270,
+    'WNW': 292.5,
+    'NW': 315,
+    'NNW': 337.5,
+    "---":-1
+}
+df_escom['Direccion_Viento'] = df_escom['Direccion_Viento'].map(direccion_viento_mapping)
+df_escom['Fecha_Hora'] = df_escom['Date'] + ' ' + df_escom['Time']
+# Convertir 'Fecha_Hora' a formato de fecha y hora
+df_escom['Fecha_Hora'] = pd.to_datetime(df_escom['Fecha_Hora'], format='%d/%m/%Y %H:%M', errors='coerce')
+
+# Filtrar solo las horas cerradas sin minutos
+df_escom = df_escom[df_escom['Fecha_Hora'].dt.minute == 0]
+df_escom.drop(['Date', 'Time'], axis=1, inplace=True)
+df_escom['Temperatura'] = pd.to_numeric(df_escom['Temperatura'], errors='coerce')
+df_escom = df_escom[["Id_ESCOM", "Id_Estacion", "Fecha_Hora", "Temperatura", "Humedad", "Velocidad_Viento", "Direccion_Viento", "Presion_Atmosferica","Lluvia_Acumulada", "Lluvia_Actual"]]
+df_escom.to_excel('datos_filtrados_ESCOM.xlsx', index=False)
+################################################################################################################
 #ESTABLECIENDO CONEXION CON BASE DE DATOS
 cadena_conexion='mysql+mysqldb://root:oktoberfest@localhost:3306/revision'
 conexion=create_engine(cadena_conexion)
@@ -133,3 +247,7 @@ cdmx_historico= pd.read_excel("cdmx_historico.xlsx")
 cdmx_historico.to_sql(name='cdmx_historico', con=conexion, schema="revision", index=False, if_exists='append')
 cdmx_unam= pd.read_excel("cdmx_unam.xlsx")
 cdmx_unam.to_sql(name='cdmx_unam', con=conexion, schema="revision",index=False,if_exists='append')
+cdmx_unam= pd.read_excel("datos_filtrados_UPIITA.xlsx")
+cdmx_unam.to_sql(name='upiita', con=conexion, schema="revision",index=False,if_exists='append')
+cdmx_unam= pd.read_excel("datos_filtrados_ESCOM.xlsx")
+cdmx_unam.to_sql(name='escom', con=conexion, schema="revision",index=False,if_exists='append')
