@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import glob 
 import numpy as np
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine,text
 import sqlalchemy
 all_files=glob.glob(r"C:\Users\herca\OneDrive\Documentos\Python Scripts\datos direccion cdmx\Meteorologia\*.csv")
 file_list=[]
@@ -233,6 +233,38 @@ df_escom.to_excel('datos_filtrados_ESCOM.xlsx', index=False)
 #ESTABLECIENDO CONEXION CON BASE DE DATOS
 cadena_conexion='mysql+mysqldb://root:oktoberfest@localhost:3306/revision'
 conexion=create_engine(cadena_conexion)
+#################################################################################################################
+nombres_tablas = ['zonas_estaciones', 'direccion_estaciones', 'estaciones_meteorologicas', 
+                  'variables_meteorologicas', 'cdmx_historico', 'cdmx_unam', 'upiita', 'escom']
+
+# Desactivar restricciones de clave externa
+with conexion.connect() as connection:
+    connection.execute(text('SET FOREIGN_KEY_CHECKS=0'))
+
+    # Eliminar registros existentes en cada tabla
+    for nombre_tabla in nombres_tablas:
+        delete_statement = text(f'DELETE FROM revision.{nombre_tabla}')
+        connection.execute(delete_statement)
+
+    # Activar restricciones de clave externa nuevamente
+    connection.execute(text('SET FOREIGN_KEY_CHECKS=1'))
+
+# Leer el DataFrame desde el archivo Excel
+cdmx_unam = pd.read_excel("datos_filtrados_UPIITA.xlsx")
+
+# Escribir el DataFrame en cada tabla de la base de datos
+for nombre_tabla in nombres_tablas:
+    try:
+        cdmx_unam.to_sql(name=nombre_tabla, con=conexion, schema="revision", index=False, if_exists='append')
+    except sqlalchemy.exc.IntegrityError as e:
+        # Manejar duplicados si es una clave primaria
+        if 'Duplicate entry' in str(e):
+            if 'PRIMARY' in str(e):
+                update_statement = text(f'INSERT INTO revision.{nombre_tabla} VALUES :data ON DUPLICATE KEY UPDATE')
+                connection.execute(update_statement, data=cdmx_unam.to_dict(orient='records'))
+        else:
+            raise e
+        
 #####################################################################################################
 #ESCRIBIENDO LOS DATOS EN SUS RESPECTIVAS TABLAS
 df = pd.read_excel("zona_estaciones.xlsx")
