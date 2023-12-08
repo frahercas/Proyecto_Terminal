@@ -231,7 +231,7 @@ df_escom = df_escom[["Id_ESCOM", "Id_Estacion", "Fecha_Hora", "Temperatura", "Hu
 df_escom.to_excel('datos_filtrados_ESCOM.xlsx', index=False)
 ################################################################################################################
 #ESTABLECIENDO CONEXION CON BASE DE DATOS
-cadena_conexion='mysql+mysqldb://root:oktoberfest@localhost:3306/revision'
+cadena_conexion='mysql+mysqldb://root:passwod@localhost:puerto/revision' ###Cambiar los datos a lso que corrspondan
 conexion=create_engine(cadena_conexion)
 #################################################################################################################
 nombres_tablas = ['zonas_estaciones', 'direccion_estaciones', 'estaciones_meteorologicas', 
