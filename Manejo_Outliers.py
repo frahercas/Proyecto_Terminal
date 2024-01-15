@@ -2,8 +2,9 @@
 #Código para verificar los datos "outlayers":
 import pandas as pd
 import numpy as np
-df=pd.read_excel('variables_meteorologicas.xlsx',index_col=0)
-df.drop(["Id_Estacion", "Fecha_Hora"], axis=1,inplace=True)
+import matplotlib.pyplot as plt
+df=pd.read_excel('variables_meteorologicas_ordenado.xlsx',index_col=0)
+df.drop(["Id_Estacion"], axis=1,inplace=True)
 ######################################### TEMPERATURA
 df['Temperatura'] = df['Temperatura'].replace(0, np.nan)
 x=df["Temperatura"].dropna()
