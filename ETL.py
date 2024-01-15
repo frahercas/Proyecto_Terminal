@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import glob 
 import numpy as np
+from sqlalchemy import create_engine
 from sqlalchemy import create_engine,text
 import sqlalchemy
 all_files=glob.glob(r"C:\Users\herca\OneDrive\Documentos\Python Scripts\datos direccion cdmx\Meteorologia\*.csv")
@@ -97,12 +98,20 @@ df.rename(columns={'Date':'Fecha_Hora','value':'Presion_Atmosferica'}, inplace=T
 df.to_excel('presion_limpio.xlsx', index=False) ##Escribir el dataframe resultante en un excel
 #####################################################################################################
 #DATOS TABLA "variables_meteorologicas"
-variables_totales=pd.merge(union, union_lluvia,on="Fecha_Hora", how="outer").merge(df, on="Fecha_Hora",how="outer")
+variables_totales = pd.merge(union, union_lluvia, on="Fecha_Hora", how="outer").merge(df, on="Fecha_Hora", how="outer")
 variables_totales["Id_Resgistro_Datos"] = range(1, len(variables_totales) + 1)
 variables_totales["Id_Estacion"] = ""
-variables_totales = variables_totales[["Id_Resgistro_Datos", "Id_Estacion", "Fecha_Hora", "Temperatura", "Velocidad_Viento", "Direccion_Viento","Lluvia_Actual","Lluvia_Diaria","Presion_Atmosferica","Humedad"]]
-variables_totales=variables_totales.replace(np.nan,0)
-variables_totales.to_excel('variables_meteorologicas.xlsx',index=False)
+variables_totales = variables_totales[["Id_Resgistro_Datos", "Id_Estacion", "Fecha_Hora", "Temperatura", "Velocidad_Viento", "Direccion_Viento", "Lluvia_Actual", "Lluvia_Diaria", "Presion_Atmosferica", "Humedad"]]
+variables_totales = variables_totales.replace(np.nan, 0)
+
+# Convierte la columna de fechas a objetos datetime
+variables_totales['Fecha_Hora'] = pd.to_datetime(variables_totales['Fecha_Hora'], format='%d/%m/%Y %H:%M')
+
+# Ordena el DataFrame por la columna de fechas
+variables_totales = variables_totales.sort_values(by='Fecha_Hora')
+
+# Guarda el DataFrame ordenado en un nuevo archivo Excel
+variables_totales.to_excel('variables_meteorologicas_ordenado.xlsx', index=False)
 #####################################################################################################
 #DATOS TABLA "cdmx_historico"
 cdmx_historico=variables_totales
@@ -140,7 +149,6 @@ def convertir_a_24_horas(time_str):
     elif time_str.endswith('a') and hora == 12:
         hora = 0
     return f'{hora:02d}:{minutos:02d}'
-
 df_upiita['Time'] = df_upiita['Time'].apply(convertir_a_24_horas)
 direccion_viento_mapping = {
     'N': 0,
@@ -165,7 +173,6 @@ df_upiita['Direccion_Viento'] = df_upiita['Direccion_Viento'].map(direccion_vien
 df_upiita['Fecha_Hora'] = df_upiita['Date'] + ' ' + df_upiita['Time']
 # Convertir 'Fecha_Hora' a formato de fecha y hora
 df_upiita['Fecha_Hora'] = pd.to_datetime(df_upiita['Fecha_Hora'], format='%d/%m/%Y %H:%M', errors='coerce')
-
 # Filtrar solo las horas cerradas sin minutos
 df_upiita = df_upiita[df_upiita['Fecha_Hora'].dt.minute == 0]
 df_upiita.drop(['Date', 'Time'], axis=1, inplace=True)
@@ -197,7 +204,6 @@ def convertir_a_24_horas(time_str):
     elif time_str.endswith('a') and hora == 12:
         hora = 0
     return f'{hora:02d}:{minutos:02d}'
-
 df_escom['Time'] = df_escom['Time'].apply(convertir_a_24_horas)
 direccion_viento_mapping = {
     'N': 0,
@@ -222,7 +228,6 @@ df_escom['Direccion_Viento'] = df_escom['Direccion_Viento'].map(direccion_viento
 df_escom['Fecha_Hora'] = df_escom['Date'] + ' ' + df_escom['Time']
 # Convertir 'Fecha_Hora' a formato de fecha y hora
 df_escom['Fecha_Hora'] = pd.to_datetime(df_escom['Fecha_Hora'], format='%d/%m/%Y %H:%M', errors='coerce')
-
 # Filtrar solo las horas cerradas sin minutos
 df_escom = df_escom[df_escom['Fecha_Hora'].dt.minute == 0]
 df_escom.drop(['Date', 'Time'], axis=1, inplace=True)
@@ -231,55 +236,56 @@ df_escom = df_escom[["Id_ESCOM", "Id_Estacion", "Fecha_Hora", "Temperatura", "Hu
 df_escom.to_excel('datos_filtrados_ESCOM.xlsx', index=False)
 ################################################################################################################
 #ESTABLECIENDO CONEXION CON BASE DE DATOS
-cadena_conexion='mysql+mysqldb://root:passwod@localhost:puerto/revision' ###Cambiar los datos a lso que corrspondan
+cadena_conexion='mysql+mysqldb://root:oktoberfest@localhost:3306/revision'
 conexion=create_engine(cadena_conexion)
 #################################################################################################################
-nombres_tablas = ['zonas_estaciones', 'direccion_estaciones', 'estaciones_meteorologicas', 
-                  'variables_meteorologicas', 'cdmx_historico', 'cdmx_unam', 'upiita', 'escom']
+# nombres_tablas = ['zonas_estaciones', 'direccion_estaciones', 'estaciones_meteorologicas', 
+#                   'variables_meteorologicas', 'cdmx_historico', 'cdmx_unam', 'upiita', 'escom']
 
-# Desactivar restricciones de clave externa
-with conexion.connect() as connection:
-    connection.execute(text('SET FOREIGN_KEY_CHECKS=0'))
+# # Desactivar restricciones de clave externa
+# with conexion.connect() as connection:
+#     connection.execute(text('SET FOREIGN_KEY_CHECKS=0'))
 
-    # Eliminar registros existentes en cada tabla
-    for nombre_tabla in nombres_tablas:
-        delete_statement = text(f'DELETE FROM revision.{nombre_tabla}')
-        connection.execute(delete_statement)
+#     # Eliminar registros existentes en cada tabla
+#     for nombre_tabla in nombres_tablas:
+#         delete_statement = text(f'DELETE FROM revision.{nombre_tabla}')
+#         connection.execute(delete_statement)
 
-    # Activar restricciones de clave externa nuevamente
-    connection.execute(text('SET FOREIGN_KEY_CHECKS=1'))
+#     # Activar restricciones de clave externa nuevamente
+#     connection.execute(text('SET FOREIGN_KEY_CHECKS=1'))
 
-# Leer el DataFrame desde el archivo Excel
-cdmx_unam = pd.read_excel("datos_filtrados_UPIITA.xlsx")
+# # Leer el DataFrame desde el archivo Excel
+# cdmx_unam = pd.read_excel("datos_filtrados_UPIITA.xlsx")
 
-# Escribir el DataFrame en cada tabla de la base de datos
-for nombre_tabla in nombres_tablas:
-    try:
-        cdmx_unam.to_sql(name=nombre_tabla, con=conexion, schema="revision", index=False, if_exists='append')
-    except sqlalchemy.exc.IntegrityError as e:
-        # Manejar duplicados si es una clave primaria
-        if 'Duplicate entry' in str(e):
-            if 'PRIMARY' in str(e):
-                update_statement = text(f'INSERT INTO revision.{nombre_tabla} VALUES :data ON DUPLICATE KEY UPDATE')
-                connection.execute(update_statement, data=cdmx_unam.to_dict(orient='records'))
-        else:
-            raise e
-        
+# # Escribir el DataFrame en cada tabla de la base de datos
+# for nombre_tabla in nombres_tablas:
+#     try:
+#         cdmx_unam.to_sql(name=nombre_tabla, con=conexion, schema="revision", index=False, if_exists='append')
+#     except sqlalchemy.exc.IntegrityError as e:
+#         # Manejar duplicados si es una clave primaria
+#         if 'Duplicate entry' in str(e):
+#             if 'PRIMARY' in str(e):
+#                 update_statement = text(f'INSERT INTO revision.{nombre_tabla} VALUES :data ON DUPLICATE KEY UPDATE')
+#                 connection.execute(update_statement, data=cdmx_unam.to_dict(orient='records'))
+#         else:
+#             raise e
+
 #####################################################################################################
-#ESCRIBIENDO LOS DATOS EN SUS RESPECTIVAS TABLAS
-df = pd.read_excel("zona_estaciones.xlsx")
-df.to_sql(name='zonas_estaciones', con=conexion, schema="revision", index=False, if_exists='append')
-df1 = pd.read_excel("direccion_estaciones.xlsx")
-df1.to_sql(name='direccion_estaciones', con=conexion, schema="revision", index=False, if_exists='append')
-df1 = pd.read_excel("estaciones_meteorologicas.xlsx")
-df1.to_sql(name='estaciones_meteorologicas', con=conexion, schema="revision", index=False, if_exists='append')
-variables_totales = pd.read_excel("variables_meteorologicas.xlsx")
-variables_totales.to_sql(name='variables_meteorologicas', con=conexion, schema="revision", index=False, if_exists='append')
-cdmx_historico= pd.read_excel("cdmx_historico.xlsx")
-cdmx_historico.to_sql(name='cdmx_historico', con=conexion, schema="revision", index=False, if_exists='append')
-cdmx_unam= pd.read_excel("cdmx_unam.xlsx")
-cdmx_unam.to_sql(name='cdmx_unam', con=conexion, schema="revision",index=False,if_exists='append')
-cdmx_unam= pd.read_excel("datos_filtrados_UPIITA.xlsx")
-cdmx_unam.to_sql(name='upiita', con=conexion, schema="revision",index=False,if_exists='append')
-cdmx_unam= pd.read_excel("datos_filtrados_ESCOM.xlsx")
-cdmx_unam.to_sql(name='escom', con=conexion, schema="revision",index=False,if_exists='append')
+# #ESCRIBIENDO LOS DATOS EN SUS RESPECTIVAS TABLAS
+# df = pd.read_excel("zonas_estaciones.xlsx")
+# df.to_sql(name='zonas_estaciones', con=conexion, schema="revision", index=False, if_exists='append')
+# df1 = pd.read_excel("direccion_estaciones.xlsx")
+# df1.to_sql(name='direccion_estaciones', con=conexion, schema="revision", index=False, if_exists='append')
+# df2 = pd.read_excel("estaciones_meteorologicas.xlsx")
+# df2.to_sql(name='estaciones_meteorologicas', con=conexion, schema="revision", index=False, if_exists='append')
+# variables_totales = pd.read_excel("variables_meteorologicas.xlsx")
+# variables_totales.to_sql(name='variables_meteorologicas', con=conexion, schema="revision", index=False, if_exists='append')
+# cdmx_historico= pd.read_excel("cdmx_historico.xlsx")
+# cdmx_historico.to_sql(name='cdmx_historico', con=conexion, schema="revision", index=False, if_exists='append')
+# cdmx_unam= pd.read_excel("cdmx_unam.xlsx")
+# cdmx_unam.to_sql(name='cdmx_unam', con=conexion, schema="revision",index=False,if_exists='append')
+
+# cdmx_upi= pd.read_excel("datos_filtrados_UPIITA.xlsx")
+# cdmx_upi.to_sql(name='upiita', con=conexion, schema="revision",index=False,if_exists='append')
+# # cdmx_escom= pd.read_excel("datos_filtrados_ESCOM.xlsx")
+# # cdmx_escom.to_sql(name='escom', con=conexion, schema="revision",index=False,if_exists='append')
