@@ -41,43 +41,56 @@ union.drop(['id_station'], axis=1, inplace=True)
 union.rename(columns={'date':'Fecha_Hora'}, inplace=True)
 union.to_excel('Met_limpio_cdmx.xlsx', index=False) ##Escribir el dataframe resultante en un excel
 ##################################################################################################
-#LLUVIA ACUMULADA
+# Obtener la lista de archivos
 all_files = glob.glob(r"C:\Users\herca\OneDrive\Documentos\Python Scripts\datos observatorio\acumulada por año\*.csv")
-file_list = []
-for f in all_files:
-    data = pd.read_csv(f)
-    nombre = os.path.basename(f)
-    data['source_file'] = nombre  # en este for leemos todos los archivos que obtuvimos en este directorio
-    file_list.append(data)
-    
-df = pd.concat(file_list, ignore_index=True) #Mostramos el Dataframe concatenado
-df.dropna(inplace=True)  # quitando las filas que no sirven (contienen valores nulos)
-df.drop(['source_file'], axis=1, inplace=True)  # quitando columnas que no sirven
-df['Fecha/hora'] = pd.to_datetime(df['Fecha/hora']).dt.strftime('%d/%m/%Y %H:%M')# Convertir el formato de la columna 'Fecha/hora'
-df_filtered_acum = df[df['Fecha/hora'].str[-2:] == '00']# Filtrar los registros que tienen la hora exacta sin minutos
-df_filtered_acum.to_excel('Lluvia_Acumulada_limpio_cdmx.xlsx', index=False)# Escribir el DataFrame resultante en un archivo de Excel
-##################################################################################################
-#LLUVIA INTENSIDAD
-all_files = glob.glob(r"C:\Users\herca\OneDrive\Documentos\Python Scripts\datos observatorio\intensidad por año\*.csv")
-file_list = []
-for f in all_files:
-    data = pd.read_csv(f)
-    nombre = os.path.basename(f)
-    data['source_file'] = nombre  # en este for leemos todos los archivos que obtuvimos en este directorio
-    file_list.append(data)
-    
-df = pd.concat(file_list, ignore_index=True) #Mostramos el Dataframe concatenado
-df.dropna(inplace=True)  # quitando las filas que no sirven (contienen valores nulos)
-df.drop(['source_file'], axis=1, inplace=True)  # quitando columnas que no sirven
+
+# Leer y concatenar los archivos en un solo DataFrame
+df = pd.concat([pd.read_csv(f) for f in all_files], ignore_index=True)
+
+# # Eliminar filas con valores nulos y columnas 'source_file'
+df.dropna(inplace=True)
 df.drop(['Estación'], axis=1, inplace=True)
-df['Fecha/hora'] = pd.to_datetime(df['Fecha/hora']).dt.strftime('%d/%m/%Y %H:%M')# Convertir el formato de la columna 'Fecha/hora'
-df_filtered_inten= df[df['Fecha/hora'].str[-2:] == '00']# Filtrar los registros que tienen la hora exacta sin minutos
-df_filtered_inten.to_excel('Lluvia_intesidad_limpio_cdmx.xlsx', index=False)# Escribir el DataFrame resultante en un archivo de Excel
-union_lluvia=pd.merge(df_filtered_acum,df_filtered_inten, on="Fecha/hora", how="outer")
-union_lluvia.drop(['Estación'], axis=1, inplace=True)
-union_lluvia.rename(columns={'Fecha/hora':'Fecha_Hora','Acumulada [mm]':'Lluvia_Diaria','Intensidad [mm/h]':'Lluvia_Actual'}, inplace=True)
-union_lluvia.to_excel('lluvia_union.xlsx',index=False)
-##################################################################################################
+
+# Convertir la columna 'Fecha/hora' a formato datetime
+df['Fecha/hora'] = pd.to_datetime(df['Fecha/hora'], errors='coerce')
+
+# Filtrar los registros con la hora exacta sin minutos
+df_filtered_acum = df[df['Fecha/hora'].dt.minute == 0]
+
+# Escribir el DataFrame resultante en un archivo de Excel
+df_filtered_acum.to_excel('Lluvia_Acumulada_limpio_cdmx.xlsx', index=False)
+# ##################################################################################################
+# Obtener la lista de archivos
+all_files = glob.glob(r"C:\Users\herca\OneDrive\Documentos\Python Scripts\datos observatorio\intensidad por año\*.csv")
+
+# Leer y concatenar los archivos en un solo DataFrame
+df = pd.concat([pd.read_csv(f) for f in all_files], ignore_index=True)
+
+# # Eliminar filas con valores nulos y columnas 'source_file' y 'Estación'
+df.dropna(inplace=True)
+df.drop(['Estación'], axis=1, inplace=True)
+
+# Convertir la columna 'Fecha/hora' a formato datetime
+df['Fecha/hora'] = pd.to_datetime(df['Fecha/hora'], errors='coerce')
+
+# Filtrar los registros con la hora exacta sin minutos
+df_filtered_inten = df[df['Fecha/hora'].dt.minute == 0]
+
+# Escribir el DataFrame resultante en un archivo de Excel
+df_filtered_inten.to_excel('Lluvia_intesidad_limpio_cdmx.xlsx', index=False)
+
+# Unir los DataFrames de lluvia acumulada y lluvia intensidad
+union_lluvia = pd.merge(df_filtered_acum, df_filtered_inten, on="Fecha/hora", how="outer")
+
+# # Eliminar la columna 'Estación' del DataFrame resultante
+# union_lluvia.drop(['Estación'], axis=1, inplace=True)
+
+# Renombrar columnas
+union_lluvia.rename(columns={'Fecha/hora':'Fecha_Hora', 'Acumulada [mm]':'Lluvia_Diaria', 'Intensidad [mm/h]':'Lluvia_Actual'}, inplace=True)
+
+# Escribir el DataFrame resultante en un archivo de Excel
+union_lluvia.to_excel('lluvia_union.xlsx', index=False)
+# ##################################################################################################
 #PRESION
 all_files=glob.glob(r"C:\Users\herca\OneDrive\Documentos\Python Scripts\datos direccion cdmx\MeteologiaPresion\*.csv")
 file_list=[]
@@ -98,6 +111,11 @@ df.rename(columns={'Date':'Fecha_Hora','value':'Presion_Atmosferica'}, inplace=T
 df.to_excel('presion_limpio.xlsx', index=False) ##Escribir el dataframe resultante en un excel
 #####################################################################################################
 #DATOS TABLA "variables_meteorologicas"
+# Convierte la columna de fechas a objetos datetime en todos los DataFrames involucrados
+union['Fecha_Hora'] = pd.to_datetime(union['Fecha_Hora'], format='%d/%m/%Y %H:%M')
+union_lluvia['Fecha_Hora'] = pd.to_datetime(union_lluvia['Fecha_Hora'], format='%d/%m/%Y %H:%M')
+df['Fecha_Hora'] = pd.to_datetime(df['Fecha_Hora'], format='%d/%m/%Y %H:%M')
+
 variables_totales = pd.merge(union, union_lluvia, on="Fecha_Hora", how="outer").merge(df, on="Fecha_Hora", how="outer")
 variables_totales["Id_Resgistro_Datos"] = range(1, len(variables_totales) + 1)
 variables_totales["Id_Estacion"] = ""
@@ -112,180 +130,18 @@ variables_totales = variables_totales.sort_values(by='Fecha_Hora')
 
 # Guarda el DataFrame ordenado en un nuevo archivo Excel
 variables_totales.to_excel('variables_meteorologicas_ordenado.xlsx', index=False)
+
 #####################################################################################################
 #DATOS TABLA "cdmx_historico"
 cdmx_historico=variables_totales
 cdmx_historico["Id_CDMX"] = range(1, len(variables_totales) + 1)
 cdmx_historico = variables_totales[["Id_CDMX","Id_Estacion", "Fecha_Hora", "Temperatura", "Velocidad_Viento", "Direccion_Viento","Presion_Atmosferica","Humedad"]]
 cdmx_historico.to_excel('cdmx_historico.xlsx',index=False)
-#####################################################################################################
+####################################################################################################
 #DATOS TABLA "cdmx_unam"
 cdmx_unam=variables_totales
 cdmx_unam["Id_UNAM"] = range(1, len(variables_totales) + 1)
 cdmx_unam = variables_totales[["Id_UNAM","Id_Estacion", "Fecha_Hora", "Lluvia_Actual","Lluvia_Diaria"]]
 cdmx_unam.to_excel('cdmx_unam.xlsx', index=False)
 #####################################################################################################
-#DATOS TABLA "upiita"
-ruta_directorio = r'C:\Users\herca\OneDrive\Documentos\Python Scripts\Davis'
-nombre_archivo = 'DatosFiltrados.txt'
-ruta_archivo = f'{ruta_directorio}\\{nombre_archivo}'
-names = ['Date', 'Time', 'Temp Out', 'Hi Temp', 'Low Temp', 'Out Hum', 'Dew Pt.', 'Wind Speed', 'Wind Dir', 'Wind Run',
-         'Hi Speed', 'Hi Dir', 'Wind Chill', 'Heat Index', 'THW Index', 'Bar', 'Rain', 'Rain Rate', 'Heat D-D',
-         'Cool D-D', 'In Temp', 'In Hum', 'In Dew', 'In Heat', 'In EMC', 'In Air Density', 'Wind Samp', 'Wind Tx',
-         'ISS Recept', 'Arc. Int']
-df_inicial = pd.read_csv(ruta_archivo, delimiter='\s+', error_bad_lines=False, header=None, names=names)
-df_inicial["Id_UPIITA"] = range(1, len(df_inicial) + 1)
-df_inicial["Id_Estacion"] = ""
-df_upiita = df_inicial[["Id_UPIITA", "Id_Estacion", "Date", "Time", "Hi Temp", "In Hum", "Wind Speed", "Wind Dir", "Bar",
-                        "Rain", "Rain Rate"]]
-df_upiita.rename(columns={'Hi Temp': 'Temperatura', 'In Hum': 'Humedad', 'Wind Speed': 'Velocidad_Viento',
-                          'Wind Dir': 'Direccion_Viento', 'Bar': 'Presion_Atmosferica', 'Rain': 'Lluvia_Acumulada',
-                          'Rain Rate': 'Lluvia_Actual'}, inplace=True)
-df_upiita['Date'] = pd.to_datetime(df_upiita['Date'], format='%d/%m/%y', errors='coerce').dt.strftime('%d/%m/%Y')
-def convertir_a_24_horas(time_str):
-    hora, minutos = map(int, time_str[:-1].split(':'))
-    if time_str.endswith('p') and hora != 12:
-        hora += 12
-    elif time_str.endswith('a') and hora == 12:
-        hora = 0
-    return f'{hora:02d}:{minutos:02d}'
-df_upiita['Time'] = df_upiita['Time'].apply(convertir_a_24_horas)
-direccion_viento_mapping = {
-    'N': 0,
-    'NNE': 22.5,
-    'NE': 45,
-    'ENE': 67.5,
-    'E': 90,
-    'ESE': 112.5,
-    'SE': 135,
-    'SSE': 157.5,
-    'S': 180,
-    'SSW': 202.5,
-    'SW': 225,
-    'WSW': 247.5,
-    'W': 270,
-    'WNW': 292.5,
-    'NW': 315,
-    'NNW': 337.5,
-    "---":-1
-}
-df_upiita['Direccion_Viento'] = df_upiita['Direccion_Viento'].map(direccion_viento_mapping)
-df_upiita['Fecha_Hora'] = df_upiita['Date'] + ' ' + df_upiita['Time']
-# Convertir 'Fecha_Hora' a formato de fecha y hora
-df_upiita['Fecha_Hora'] = pd.to_datetime(df_upiita['Fecha_Hora'], format='%d/%m/%Y %H:%M', errors='coerce')
-# Filtrar solo las horas cerradas sin minutos
-df_upiita = df_upiita[df_upiita['Fecha_Hora'].dt.minute == 0]
-df_upiita.drop(['Date', 'Time'], axis=1, inplace=True)
-df_upiita['Temperatura'] = pd.to_numeric(df_upiita['Temperatura'], errors='coerce')
-df_upiita = df_upiita[["Id_UPIITA", "Id_Estacion", "Fecha_Hora", "Temperatura", "Humedad", "Velocidad_Viento", "Direccion_Viento", "Presion_Atmosferica","Lluvia_Acumulada", "Lluvia_Actual"]]
-df_upiita.to_excel('datos_filtrados_UPIITA.xlsx', index=False)
-################################################################################################################
-#DATOS TABLA escom
-ruta_directorio = r'C:\Users\herca\OneDrive\Documentos\Python Scripts\Davis\davis ESCOM'
-nombre_archivo = 'DatosFiltrados.txt'
-ruta_archivo = f'{ruta_directorio}\\{nombre_archivo}'
-names = ['Date', 'Time', 'Temp Out', 'Hi Temp', 'Low Temp', 'Out Hum', 'Dew Pt.', 'Wind Speed', 'Wind Dir', 'Wind Run',
-         'Hi Speed', 'Hi Dir', 'Wind Chill', 'Heat Index', 'THW Index', 'Bar', 'Rain', 'Rain Rate', 'Heat D-D',
-         'Cool D-D', 'In Temp', 'In Hum', 'In Dew', 'In Heat', 'In EMC', 'In Air Density', 'Wind Samp', 'Wind Tx',
-         'ISS Recept', 'Arc. Int']
-df_inicial = pd.read_csv(ruta_archivo, delimiter='\s+', error_bad_lines=False, header=None, names=names)
-df_inicial["Id_ESCOM"] = range(1, len(df_inicial) + 1)
-df_inicial["Id_Estacion"] = ""
-df_escom = df_inicial[["Id_ESCOM", "Id_Estacion", "Date", "Time", "Hi Temp", "In Hum", "Wind Speed", "Wind Dir", "Bar",
-                        "Rain", "Rain Rate"]]
-df_escom.rename(columns={'Hi Temp': 'Temperatura', 'In Hum': 'Humedad', 'Wind Speed': 'Velocidad_Viento',
-                          'Wind Dir': 'Direccion_Viento', 'Bar': 'Presion_Atmosferica', 'Rain': 'Lluvia_Acumulada',
-                          'Rain Rate': 'Lluvia_Actual'}, inplace=True)
-df_escom['Date'] = pd.to_datetime(df_escom['Date'], format='%d/%m/%y', errors='coerce').dt.strftime('%d/%m/%Y')
-def convertir_a_24_horas(time_str):
-    hora, minutos = map(int, time_str[:-1].split(':'))
-    if time_str.endswith('p') and hora != 12:
-        hora += 12
-    elif time_str.endswith('a') and hora == 12:
-        hora = 0
-    return f'{hora:02d}:{minutos:02d}'
-df_escom['Time'] = df_escom['Time'].apply(convertir_a_24_horas)
-direccion_viento_mapping = {
-    'N': 0,
-    'NNE': 22.5,
-    'NE': 45,
-    'ENE': 67.5,
-    'E': 90,
-    'ESE': 112.5,
-    'SE': 135,
-    'SSE': 157.5,
-    'S': 180,
-    'SSW': 202.5,
-    'SW': 225,
-    'WSW': 247.5,
-    'W': 270,
-    'WNW': 292.5,
-    'NW': 315,
-    'NNW': 337.5,
-    "---":-1
-}
-df_escom['Direccion_Viento'] = df_escom['Direccion_Viento'].map(direccion_viento_mapping)
-df_escom['Fecha_Hora'] = df_escom['Date'] + ' ' + df_escom['Time']
-# Convertir 'Fecha_Hora' a formato de fecha y hora
-df_escom['Fecha_Hora'] = pd.to_datetime(df_escom['Fecha_Hora'], format='%d/%m/%Y %H:%M', errors='coerce')
-# Filtrar solo las horas cerradas sin minutos
-df_escom = df_escom[df_escom['Fecha_Hora'].dt.minute == 0]
-df_escom.drop(['Date', 'Time'], axis=1, inplace=True)
-df_escom['Temperatura'] = pd.to_numeric(df_escom['Temperatura'], errors='coerce')
-df_escom = df_escom[["Id_ESCOM", "Id_Estacion", "Fecha_Hora", "Temperatura", "Humedad", "Velocidad_Viento", "Direccion_Viento", "Presion_Atmosferica","Lluvia_Acumulada", "Lluvia_Actual"]]
-df_escom.to_excel('datos_filtrados_ESCOM.xlsx', index=False)
-################################################################################################################
-#ESTABLECIENDO CONEXION CON BASE DE DATOS
-cadena_conexion='mysql+mysqldb://root:oktoberfest@localhost:3306/revision'
-conexion=create_engine(cadena_conexion)
-#################################################################################################################
-# nombres_tablas = ['zonas_estaciones', 'direccion_estaciones', 'estaciones_meteorologicas', 
-#                   'variables_meteorologicas', 'cdmx_historico', 'cdmx_unam', 'upiita', 'escom']
 
-# # Desactivar restricciones de clave externa
-# with conexion.connect() as connection:
-#     connection.execute(text('SET FOREIGN_KEY_CHECKS=0'))
-
-#     # Eliminar registros existentes en cada tabla
-#     for nombre_tabla in nombres_tablas:
-#         delete_statement = text(f'DELETE FROM revision.{nombre_tabla}')
-#         connection.execute(delete_statement)
-
-#     # Activar restricciones de clave externa nuevamente
-#     connection.execute(text('SET FOREIGN_KEY_CHECKS=1'))
-
-# # Leer el DataFrame desde el archivo Excel
-# cdmx_unam = pd.read_excel("datos_filtrados_UPIITA.xlsx")
-
-# # Escribir el DataFrame en cada tabla de la base de datos
-# for nombre_tabla in nombres_tablas:
-#     try:
-#         cdmx_unam.to_sql(name=nombre_tabla, con=conexion, schema="revision", index=False, if_exists='append')
-#     except sqlalchemy.exc.IntegrityError as e:
-#         # Manejar duplicados si es una clave primaria
-#         if 'Duplicate entry' in str(e):
-#             if 'PRIMARY' in str(e):
-#                 update_statement = text(f'INSERT INTO revision.{nombre_tabla} VALUES :data ON DUPLICATE KEY UPDATE')
-#                 connection.execute(update_statement, data=cdmx_unam.to_dict(orient='records'))
-#         else:
-#             raise e
-
-#####################################################################################################
-# #ESCRIBIENDO LOS DATOS EN SUS RESPECTIVAS TABLAS
-# df = pd.read_excel("zonas_estaciones.xlsx")
-# df.to_sql(name='zonas_estaciones', con=conexion, schema="revision", index=False, if_exists='append')
-# df1 = pd.read_excel("direccion_estaciones.xlsx")
-# df1.to_sql(name='direccion_estaciones', con=conexion, schema="revision", index=False, if_exists='append')
-# df2 = pd.read_excel("estaciones_meteorologicas.xlsx")
-# df2.to_sql(name='estaciones_meteorologicas', con=conexion, schema="revision", index=False, if_exists='append')
-# variables_totales = pd.read_excel("variables_meteorologicas.xlsx")
-# variables_totales.to_sql(name='variables_meteorologicas', con=conexion, schema="revision", index=False, if_exists='append')
-# cdmx_historico= pd.read_excel("cdmx_historico.xlsx")
-# cdmx_historico.to_sql(name='cdmx_historico', con=conexion, schema="revision", index=False, if_exists='append')
-# cdmx_unam= pd.read_excel("cdmx_unam.xlsx")
-# cdmx_unam.to_sql(name='cdmx_unam', con=conexion, schema="revision",index=False,if_exists='append')
-
-# cdmx_upi= pd.read_excel("datos_filtrados_UPIITA.xlsx")
-# cdmx_upi.to_sql(name='upiita', con=conexion, schema="revision",index=False,if_exists='append')
-# # cdmx_escom= pd.read_excel("datos_filtrados_ESCOM.xlsx")
-# # cdmx_escom.to_sql(name='escom', con=conexion, schema="revision",index=False,if_exists='append')
